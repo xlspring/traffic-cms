@@ -7,11 +7,14 @@ import {
   ScrollRestoration,
 } from "react-router";
 
-import type { Route } from "./+types/root";
+import type {Route} from "./+types/root";
 import "./app.css";
+import {Theme} from "@radix-ui/themes";
+import {Provider} from "react-redux";
+import {store} from "~/redux/store";
 
 export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
+  {rel: "preconnect", href: "https://fonts.googleapis.com"},
   {
     rel: "preconnect",
     href: "https://fonts.gstatic.com",
@@ -23,29 +26,33 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout({children}: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <Provider store={store}>
+      <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <Meta />
-        <Links />
+        <meta charSet="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <Meta/>
+        <Links/>
       </head>
       <body>
-        {children}
-        <ScrollRestoration />
-        <Scripts />
+      <Theme accentColor={"mint"} grayColor={"gray"} panelBackground={"solid"} scaling={"100%"} radius={"medium"}>
+        <Outlet/>
+        <ScrollRestoration/>
+        <Scripts/>
+      </Theme>
       </body>
-    </html>
+      </html>
+    </Provider>
   );
 }
 
 export default function App() {
-  return <Outlet />;
+  return <Outlet/>;
 }
 
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+export function ErrorBoundary({error}: Route.ErrorBoundaryProps) {
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;

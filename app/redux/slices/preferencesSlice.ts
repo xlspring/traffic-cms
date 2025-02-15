@@ -11,9 +11,14 @@ const initialState: PreferencesData = {
 };
 
 export const refreshDB = createAsyncThunk("preferences/update-db", async () => {
+  const token = localStorage.getItem("token");
   try {
-    //TODO implement the refresh server feature when backend is ready
-    console.log("As if the db is updated");
+    // if it is null or smth then the server would return an error
+    // @ts-ignore
+    await fetch(`${import.meta.env.VITE_BACKEND_URL}/lights/update`, {
+      method: "POST",
+      headers: {"Authorization": token}
+    }).then(() => console.log("Updated"));
   } catch (e) {
     console.error(e)
   }

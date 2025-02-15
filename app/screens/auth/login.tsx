@@ -14,25 +14,32 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState<string>();
-  const [password, setPassword] = useState<string>();
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const tryLogin = () => {
-    // TODO write actual login logic when backend is ready
+  const tryLogin = async () => {
+    console.log(username, password);
+    await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/login`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username, password}),
+    })
+      .then(res => {
+        if (res.ok) {
+          return res.json();
+        }
+        throw new Error("Failed to login");
+      })
+      .then(data => localStorage.setItem("token", data.token))
+      .then(() => navigate("/dashboard"))
+      .catch((error) => {
+        console.log(error);
 
-    const promise = new Promise(resolve => {
-      if (email && password) {
-        // dispatch(setToken("umm-chile-anyways-so"))
-        localStorage.setItem("token", "sample-token");
-        resolve(true)
-      }
-    });
-
-    promise.then(() => navigate("/dashboard")).catch((error) => {
-      console.log(error)
-    });
+        setPassword("");
+        setUsername("");
+      });
   };
 
   return (
@@ -41,12 +48,14 @@ export default function LoginScreen() {
         <Heading as={"h1"}>Login</Heading>
       </Box>
       <Flex align={"stretch"} justify={"center"} direction={"column"} gap={"3"}>
-        <TextField.Root placeholder={"Email"} type={"email"} onChange={(t) => setEmail(t.target.value)}>
+        <TextField.Root placeholder={"Email"} type={"email"} value={username}
+                        onChange={(t) => setUsername(t.target.value)}>
           <TextField.Slot>
             <EnvelopeClosedIcon/>
           </TextField.Slot>
         </TextField.Root>
-        <TextField.Root placeholder={"Password"} type={"password"} onChange={(t) => setPassword(t.target.value)}>
+        <TextField.Root placeholder={"Password"} type={"password"} value={password}
+                        onChange={(t) => setPassword(t.target.value)}>
           <TextField.Slot>
             <LockClosedIcon/>
           </TextField.Slot>

@@ -1,72 +1,92 @@
 import {createAsyncThunk, createSlice, type PayloadAction} from "@reduxjs/toolkit";
+import type {RootState} from "~/redux/store.ts";
 
-export interface LogsData {
-  date: string;
-  priority: number;
-  message: string;
+export interface LightData {
+  id: number,
+  lat: number,
+  lon: number,
+  status: boolean,
+  street: string,
+  votes: number,
+  updated: number
 }
 
-const initialState: LogsData[] = [{
-  "date": "1734596634000",
-  "priority": 1,
-  "message": "Aenean lectus."
-}, {
-  "date": "1723105548000",
-  "priority": 0,
-  "message": "In tempor, turpis nec euismod scelerisque, quam turpis adipiscing lorem, vitae mattis nibh ligula nec sem. Duis aliquam convallis nunc."
-}, {
-  "date": "1722469040000",
-  "priority": 0,
-  "message": "Duis aliquam convallis nunc. Proin at turpis a pede posuere nonummy."
-}, {
-  "date": "1738802621000",
-  "priority": 0,
-  "message": "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Donec pharetra, magna vestibulum aliquet ultrices, erat tortor sollicitudin mi, sit amet lobortis sapien sapien non mi."
-}, {
-  "date": "1722674369000",
-  "priority": 2,
-  "message": "Aliquam non mauris. Morbi non lectus."
-}, {
-  "date": "1709671567000",
-  "priority": 1,
-  "message": "Nulla facilisi. Cras non velit nec nisi vulputate nonummy."
-}, {
-  "date": "1732074908000",
-  "priority": 0,
-  "message": "Aliquam sit amet diam in magna bibendum imperdiet."
-}, {
-  "date": "1719722950000",
-  "priority": 3,
-  "message": "Morbi sem mauris, laoreet ut, rhoncus aliquet, pulvinar sed, nisl."
-}, {
-  "date": "1729721354000",
-  "priority": 1,
-  "message": "Proin at turpis a pede posuere nonummy. Integer non velit."
-}, {
-  "date": "1738805445000",
-  "priority": 1,
-  "message": "Maecenas tincidunt lacus at velit. Vivamus vel nulla eget eros elementum pellentesque."
-}];
+export interface LightOptions {
+  skipped: number;
+  lights: LightData[];
+}
 
-export const tryFetchLogs = createAsyncThunk("preferences/fetch-logs", async (_, ThunkAPI) => {
-  try {
-    //TODO implement the fetch logs feature when backend is ready
-  } catch (e) {
-    console.error(e)
-  }
+const initialState: LightOptions = {
+  skipped: 0,
+  lights: [],
+};
+
+export const fetchSigns = createAsyncThunk("light/fetch", async (_, ThunkAPI) => {
+  const state: RootState = ThunkAPI.getState();
+  await fetch(`${import.meta.env.VITE_BACKEND_URL}/lights/get/${state.lights.skipped}`)
+    .then(res => {
+      if (res.ok) {
+        return res.json();
+      }
+      throw new Error("Failed fetching traffic lights");
+    })
+    .then(res => ThunkAPI.dispatch(setLights(res)))
+    .catch((e) => console.log(e));
 })
 
-export const logSlice = createSlice({
-  name: "preferences",
+export const toggleSign = createAsyncThunk("light/toggleSwitch", async (id: number, ThunkAPI) => {
+  const token = localStorage.getItem("token");
+  await fetch(`${import.meta.env.VITE_BACKEND_URL}/lights/toggle/${id}`, {
+    method: "PUT",
+    headers: {"Authorization": token},
+  })
+    .then(res => {
+      if (res.ok) {
+        return res.json();
+      }
+      throw new Error("Failed toggling traffic lights");
+    })
+    .then(res => ThunkAPI.dispatch(fetchSigns()))
+    .catch((e) => console.log(e));
+})
+
+export const changeStreetName = createAsyncThunk("light/toggleSwitch", async (data: {
+  id: number,
+  name: string
+}, ThunkAPI) => {
+  const token = localStorage.getItem("token");
+  await fetch(`${import.meta.env.VITE_BACKEND_URL}/lights/edit-street/${data.id}`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "Authorization": token},
+    body: JSON.stringify({name: data.name})
+  })
+    .then(res => {
+      if (res.ok) {
+        return res.json();
+      }
+      throw new Error("Failed editing street");
+    })
+    .then(res => ThunkAPI.dispatch(fetchSigns()))
+    .catch((e) => console.log(e));
+})
+
+export const lightSlice = createSlice({
+  name: "light",
   initialState,
   reducers: {
-    setLogs(state, action: PayloadAction<LogsData[]>) {
-      state = [];
-      state = [...action.payload];
+    incrementSkipped: (state) => {
+      state.skipped += 10;
+    },
+    decrementSkipped: (state) => {
+      state.skipped -= 10;
+    },
+    setLights: (state, action: PayloadAction<LightData[]>) => {
+      state.lights = [];
+      state.lights = [...action.payload];
     }
   },
 });
 
-export const {setLogs} =
-  logSlice.actions;
-export default logSlice.reducer;
+export const {incrementSkipped, decrementSkipped, setLights} =
+  lightSlice.actions;
+export default lightSlice.reducer;

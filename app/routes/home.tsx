@@ -1,5 +1,7 @@
 import type {Route} from "./+types/home";
 
+import Map from "~/screens/map/map";
+
 export function meta({}: Route.MetaArgs) {
   return [
     {title: "New React Router App"},
@@ -8,5 +10,5 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  return <h1>Bogus</h1>;
+  return <Map/>;
 }

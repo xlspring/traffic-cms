@@ -1,4 +1,9 @@
 .react-router
 build
 node_modules
+.git
+.idea
+.env
+# Don't ignore tests directory
+# tests/
 README.md

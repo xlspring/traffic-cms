@@ -17,90 +17,15 @@ jobs:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USER_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-      
-      # Convert GitHub issue body to Atlassian Document Format
-      - name: Prepare Jira description
-        id: prepare_description
-        uses: actions/github-script@v6.4.1
-        with:
-          result-encoding: string
-          script: |
-            const issueBody = `${{ github.event.issue.body }}`;
-            
-            // Create a basic Atlassian Document format object
-            const adfDoc = {
-              "version": 1,
-              "type": "doc",
-              "content": [
-                {
-                  "type": "paragraph",
-                  "content": [
-                    {
-                      "type": "text",
-                      "text": issueBody || "No description provided."
-                    }
-                  ]
-                },
-                {
-                  "type": "paragraph",
-                  "content": [
-                    {
-                      "type": "text",
-                      "text": "GitHub Issue URL: "
-                    },
-                    {
-                      "type": "text",
-                      "text": `https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }}`,
-                      "marks": [
-                        {
-                          "type": "link",
-                          "attrs": {
-                            "href": `https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }}`
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            };
-            
-            return JSON.stringify(adfDoc);
-      
-      # Create the new Jira ticket with properly formatted description
-      - name: Create Jira ticket
-        id: create_jira_ticket
+        
+      - name: Create
+        id: create
         uses: atlassian/gajira-create@v3
         with:
-          project: TEST
+          project: GA
           issuetype: Bug
           summary: ${{ github.event.issue.title }}
-          description: ${{ steps.prepare_description.outputs.result }}
-          fields: '{"labels": ["github-issue"]}'
+          description: ${{ github.event.issue.body }}
       
-      # Add the Jira ticket ID in the issue
-      - name: Update issue body
-        uses: actions/github-script@v6.4.1
-        env:
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          issue_number: ${{ github.event.issue.number }}
-          body: ${{ github.event.issue.body }}
-          jira_ticket_id: ${{ steps.create_jira_ticket.outputs.issue }}
-          jira_base_url: ${{ secrets.JIRA_BASE_URL }}
-        with:
-          script: |
-            const body = process.env.body || '';
-            const jiraTicketId = process.env.jira_ticket_id;
-            const jiraBaseUrl = process.env.jira_base_url;
-            
-            // Create a link to the Jira ticket
-            const jiraTicketUrl = `${jiraBaseUrl}/browse/${jiraTicketId}`;
-            const updatedBody = body + "\n\n---\n\n**Jira Ticket:** [" + jiraTicketId + "](" + jiraTicketUrl + ")";
-            
-            await github.rest.issues.update({
-              owner: process.env.owner,
-              repo: process.env.repo,
-              issue_number: parseInt(process.env.issue_number),
-              body: updatedBody
-            });
+      - name: Log created issue
+        run: echo "Issue ${{ steps.create.outputs.issue }} was created"

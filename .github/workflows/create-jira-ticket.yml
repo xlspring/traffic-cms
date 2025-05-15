@@ -1,0 +1,40 @@
+name: Create Jira Ticket on Issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  create-jira-ticket:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Jira Ticket
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          echo "Creating Jira ticket..."
+
+          ISSUE_JSON=$(jq -n \
+            --arg summary "$ISSUE_TITLE" \
+            --arg description "$ISSUE_BODY" \
+            --arg projectKey "$JIRA_PROJECT_KEY" \
+            '{
+              fields: {
+                project: { key: $projectKey },
+                summary: $summary,
+                description: $description,
+                issuetype: { name: "Task" }
+              }
+            }')
+
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            --data "$ISSUE_JSON" \
+            "$JIRA_BASE_URL/rest/api/3/issue"

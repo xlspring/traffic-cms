@@ -1,40 +1,46 @@
-name: Create Jira Ticket on Issue
+name: Create Jira Ticket for Opened Issue
 
 on:
+  # Will trigger the workflow when a new issue is opened
   issues:
-    types: [opened]
+    types: opened
 
 jobs:
-  create-jira-ticket:
+  create_jira_ticket:
+    permissions: write-all
     runs-on: ubuntu-latest
-
     steps:
-      - name: Create Jira Ticket
+      # Authenticate with Jira first
+      - name: Jira Login
+        uses: atlassian/gajira-login@v3
         env:
-          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-        run: |
-          echo "Creating Jira ticket..."
-
-          ISSUE_JSON=$(jq -n \
-            --arg summary "$ISSUE_TITLE" \
-            --arg description "$ISSUE_BODY" \
-            --arg projectKey "$JIRA_PROJECT_KEY" \
-            '{
-              fields: {
-                project: { key: $projectKey },
-                summary: $summary,
-                description: $description,
-                issuetype: { name: "Task" }
-              }
-            }')
-
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-            --data "$ISSUE_JSON" \
-            "$JIRA_BASE_URL/rest/api/3/issue"
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      # Create the new Jira ticket
+      - name: Create Jira ticket
+        id: create_jira_ticket
+        uses: atlassian/gajira-create@v3
+        with:
+          project: TEST
+          issuetype: Bug
+          summary: ${{ github.event.issue.title }}
+          description: ${{ github.event.issue.body }}
+      # Add the Jira ticket ID in the issue
+      - name: Update issue body
+        uses: actions/github-script@v6.4.1
+        env:
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          issue_number: ${{ github.event.issue.number }}
+          body: ${{ github.event.issue.body }}
+          jira_ticket_id: ${{ steps.create_jira_ticket.outputs.issue }}
+        with:
+          script: |
+            github.rest.issues.update({
+              owner: process.env.owner,
+              repo: process.env.repo,
+              issue_number: process.env.issue_number,
+              body: process.env.body + "\n\n---\n\n**Jira Ticket ID:** " + \
+              process.env.jira_ticket_id
+            })

@@ -1,4 +1,3 @@
-
 name: Docker Build and Push
 
 on:
@@ -49,6 +48,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/traffic-cms
           tags: |
             type=raw,value=latest
             type=sha,format=short
